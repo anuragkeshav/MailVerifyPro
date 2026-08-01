@@ -4,7 +4,7 @@ node_modules/
 .pnp.js
 
 # Build outputs
-backend/dist/
+app/dist/
 frontend/dist/
 
 # Runtime data
@@ -14,7 +14,7 @@ logs/
 
 # Environment files
 .env
-backend/.env
+app/.env
 
 # OS files
 .DS_Store
