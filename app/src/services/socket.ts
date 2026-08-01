@@ -3,6 +3,7 @@ import { Server as HttpServer } from 'http';
 import { ProgressData, EmailResult } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
+import * as queries from '../db/queries.js';
 
 let io: SocketIOServer;
 
@@ -21,10 +22,26 @@ export const initSocket = (server: HttpServer) => {
       logger.info(`Client disconnected: ${socket.id}`);
     });
     
-    socket.on('subscribe', (jobId: string) => {
+    const joinJob = (jobId: string) => {
       socket.join(`job:${jobId}`);
       logger.info(`Socket ${socket.id} subscribed to job:${jobId}`);
-    });
+      const job = queries.getJob(jobId);
+      if (job) {
+        const progress = job.progressData;
+        socket.emit('progress', {
+          ...progress,
+          jobId,
+          status: job.status === 'running' ? 'processing' : job.status === 'cancelled' ? 'failed' : job.status,
+          percent: progress.total ? (progress.processed / progress.total) * 100 : 0,
+          etaSeconds: progress.eta,
+        });
+        const stats = queries.getJobStats(jobId);
+        socket.emit('stats:update', stats);
+        socket.emit('stats_update', stats);
+      }
+    };
+    socket.on('subscribe', joinJob);
+    socket.on('join:job', joinJob);
     
     socket.on('unsubscribe', (jobId: string) => {
       socket.leave(`job:${jobId}`);
@@ -56,5 +73,8 @@ export const emitJobError = (jobId: string, error: any) => {
 };
 
 export const emitStatsUpdate = (jobId: string, stats: Record<string, number>) => {
-  if (io) io.to(`job:${jobId}`).emit('stats_update', stats);
+  if (io) {
+    io.to(`job:${jobId}`).emit('stats_update', stats);
+    io.to(`job:${jobId}`).emit('stats:update', stats);
+  }
 };

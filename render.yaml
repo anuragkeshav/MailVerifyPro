@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: mailverify-pro
+    runtime: node
+    plan: free
+    buildCommand: cd frontend && npm ci && npm run build && mkdir -p ../app/public && cp -R dist/. ../app/public && cd ../app && npm ci
+    startCommand: cd app && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: EMAIL_VERIFICATION_PROVIDER
+        value: mailboxlayer
+      - key: MAILBOXLAYER_API_KEY
+        sync: false
+      - key: MAILBOXLAYER_REQUEST_INTERVAL_MS
+        value: 1200
+      - key: MAILBOXLAYER_MAX_RETRIES
+        value: 2

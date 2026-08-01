@@ -30,6 +30,7 @@ export function useSocket(jobId: string | null) {
     socket.on('connect', () => {
       setIsConnected(true);
       socket.emit('join:job', jobId);
+      socket.emit('subscribe', jobId);
     });
 
     socket.on('disconnect', () => {
@@ -57,6 +58,9 @@ export function useSocket(jobId: string | null) {
     });
 
     socket.on('stats:update', (data: JobStats) => {
+      setStats(data);
+    });
+    socket.on('stats_update', (data: JobStats) => {
       setStats(data);
     });
 

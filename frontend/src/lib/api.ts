@@ -34,8 +34,8 @@ export const api = {
   },
 
   getResults: async (jobId: string, params: { page?: number; limit?: number; status?: string; search?: string }): Promise<{ results: EmailResult[]; total: number }> => {
-    const response = await apiClient.get(`/jobs/${jobId}/results`, { params });
-    return response.data;
+    const response = await apiClient.get<{ emails: EmailResult[]; total: number }>(`/jobs/${jobId}/results`, { params });
+    return { results: response.data.emails, total: response.data.total };
   },
 
   getJobStats: async (jobId: string): Promise<JobStats> => {
@@ -48,8 +48,8 @@ export const api = {
     return response.data;
   },
 
-  getJobDetails: async (jobId: string): Promise<Job> => {
-    const response = await apiClient.get<Job>(`/jobs/${jobId}`);
+  getJobDetails: async (jobId: string): Promise<{ job: Job; stats: JobStats }> => {
+    const response = await apiClient.get<{ job: Job; stats: JobStats }>(`/jobs/${jobId}`);
     return response.data;
   },
 
