@@ -11,6 +11,7 @@ import { handleGreylisting } from './greylisting.js';
 import { wrapWithTimeout } from './timeout.js';
 import { EmailResult, EmailStatus } from '../../types/index.js';
 import { calculateScore } from './scoring.js';
+import { verifyWithMailboxlayer } from './mailboxlayer.js';
 
 /**
  * Orchestrates the complete 10-step email verification pipeline.
@@ -58,6 +59,17 @@ export async function verifyEmail(email: string): Promise<EmailResult> {
       logger?.info(`Syntax invalid for ${email}: ${syntaxResult.reason}`);
       const scoreRes = calculateScore(scoringParams);
       return buildResult(result, scoreRes, startTime, syntaxResult.reason);
+    }
+
+    // Render Free blocks SMTP ports. A managed provider keeps mailbox checks
+    // server-side and avoids turning network limits into false Invalid results.
+    if (config.EMAIL_VERIFICATION_PROVIDER === 'mailboxlayer') {
+      try {
+        return buildProviderResult(result, await verifyWithMailboxlayer(email), startTime);
+      } catch (error: any) {
+        return buildResult(result, { score: 10, status: 'unknown', reasons: [] }, startTime,
+          error?.message || 'Managed verification API is unavailable');
+      }
     }
 
     // Step 2: Extract parts
@@ -146,6 +158,45 @@ export async function verifyEmail(email: string): Promise<EmailResult> {
     const scoreRes = calculateScore(scoringParams);
     return buildResult(result, scoreRes, startTime, `Internal error: ${error.message}`);
   }
+}
+
+function buildProviderResult(
+  partialResult: Partial<EmailResult>,
+  provider: { formatValid: boolean; mxFound: boolean; smtpCheck: boolean; catchAll: boolean; role: boolean; disposable: boolean; didYouMean: string; score: number | null },
+  startTime: number
+): EmailResult {
+  let status: EmailStatus;
+  let confidence: number;
+  let reason: string;
+  if (!provider.formatValid) {
+    [status, confidence, reason] = ['invalid', 0, 'Invalid email syntax'];
+  } else if (!provider.mxFound) {
+    [status, confidence, reason] = ['invalid', 10, 'Domain has no MX records'];
+  } else if (provider.catchAll) {
+    [status, confidence, reason] = ['catch-all', 65, 'Managed SMTP checks accepted random recipients (catch-all domain)'];
+  } else if (provider.disposable) {
+    [status, confidence, reason] = ['risky', 45, 'Known disposable email provider'];
+  } else if (provider.role) {
+    [status, confidence, reason] = ['risky', 70, 'Role-based account'];
+  } else if (provider.smtpCheck) {
+    [status, confidence, reason] = ['valid', Math.max(80, Math.min(95, Math.round((provider.score ?? 0.9) * 100))), 'Mailbox accepted by managed SMTP verification'];
+  } else {
+    [status, confidence, reason] = ['invalid', 30, 'Mailbox was not accepted by managed SMTP verification'];
+  }
+  if (provider.didYouMean) reason += `. Suggested domain: ${provider.didYouMean}`;
+  return {
+    ...partialResult,
+    status,
+    confidence,
+    isDisposable: provider.disposable,
+    isRole: provider.role,
+    isCatchAll: provider.catchAll,
+    smtpCode: provider.smtpCheck ? 250 : 550,
+    smtpMessage: 'Verified using managed SMTP checks',
+    reason,
+    verificationTimeMs: Date.now() - startTime,
+    retryCount: partialResult.retryCount || 0,
+  } as EmailResult;
 }
 
 function buildResult(

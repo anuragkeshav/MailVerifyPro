@@ -1,6 +1,5 @@
 import { ProgressData } from '@/lib/types';
 import { Progress } from '../ui/progress';
-import { motion } from 'framer-motion';
 import { Zap, Clock, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,17 +23,6 @@ export function ProgressSection({ progress }: ProgressSectionProps) {
 
   return (
     <div className="bg-card border rounded-xl p-6 shadow-sm relative overflow-hidden">
-      {/* Animated gradient background when running */}
-      {isRunning && (
-        <motion.div 
-          className="absolute inset-0 opacity-[0.03] bg-gradient-to-r from-primary via-blue-500 to-primary background-animate"
-          initial={{ backgroundPosition: '0% 50%' }}
-          animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-          style={{ backgroundSize: '200% 200%' }}
-        />
-      )}
-
       <div className="relative z-10 space-y-5">
         <div className="flex justify-between items-end">
           <div>

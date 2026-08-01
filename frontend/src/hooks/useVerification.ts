@@ -30,7 +30,7 @@ export function useVerification() {
   const loadJob = useCallback(async (jobId: string) => {
     try {
       const data = await api.getJobDetails(jobId);
-      setJob(data);
+      setJob(data.job);
       setStats(data.stats);
       setActiveJobId(jobId);
     } catch (error) {
@@ -71,7 +71,8 @@ export function useVerification() {
     if (!activeJobId) return;
     try {
       await api.startVerification(activeJobId);
-      setJob(prev => prev ? { ...prev, status: 'processing' } : null);
+      await loadJob(activeJobId);
+      setJob(prev => prev ? { ...prev, status: 'processing' } : prev);
       toast.success('Verification started');
     } catch (error) {
       toast.error('Failed to start verification');

@@ -6,9 +6,7 @@ import { FilePreview } from '@/components/upload/FilePreview';
 import { StatsCards } from '@/components/dashboard/StatsCards';
 import { ProgressSection } from '@/components/dashboard/ProgressSection';
 import { ControlBar } from '@/components/dashboard/ControlBar';
-import { LiveLogs } from '@/components/dashboard/LiveLogs';
 import { ResultsTable } from '@/components/dashboard/ResultsTable';
-import { StatusChart } from '@/components/dashboard/StatusChart';
 import { ExportPanel } from '@/components/export/ExportPanel';
 
 export default function DashboardPage() {
@@ -17,7 +15,6 @@ export default function DashboardPage() {
     job,
     stats,
     progress,
-    logs,
     results,
     totalResults,
     currentPage,
@@ -110,22 +107,20 @@ export default function DashboardPage() {
             </motion.div>
 
             <motion.div variants={itemVariants}>
-              <ProgressSection progress={progress} />
+              <ProgressSection progress={progress || (stats && job ? {
+                jobId: job.id,
+                processed: stats.processed,
+                total: stats.total,
+                percent: stats.total ? (stats.processed / stats.total) * 100 : 0,
+                status: job.status,
+              } : null)} />
             </motion.div>
 
             <motion.div variants={itemVariants}>
               <StatsCards stats={stats} />
             </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <motion.div variants={itemVariants} className="lg:col-span-2 h-[450px]">
-                <LiveLogs logs={logs} />
-              </motion.div>
-              <motion.div variants={itemVariants} className="flex flex-col gap-6">
-                <StatusChart stats={stats} />
-                {isCompleted && <ExportPanel jobId={activeJobId} stats={stats} />}
-              </motion.div>
-            </div>
+            {isCompleted && <motion.div variants={itemVariants}><ExportPanel jobId={activeJobId} stats={stats} /></motion.div>}
 
             <motion.div variants={itemVariants}>
               <ResultsTable 

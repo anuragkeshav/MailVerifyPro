@@ -38,6 +38,12 @@ A production-ready, fully local email verification web application that validate
 - Handles 100,000+ emails
 - DNS and catch-all result caching
 
+## Render deployment
+
+This repository includes a `render.yaml` Blueprint. In Render, select **New → Blueprint** and choose this repository. Add `MAILBOXLAYER_API_KEY` as a secret when prompted; never put this key in frontend code or GitHub.
+
+Render Free blocks direct SMTP ports, so the deployment uses Mailboxlayer's managed verification over HTTPS. Free Render storage is temporary: the local SQLite history and uploaded files are erased after a restart, redeploy, or idle spin-down. Use Postgres for permanent shared history.
+
 ## Architecture
 
 ```

@@ -163,9 +163,21 @@ export const getEmailsByJob = (jobId: string, opts?: { status?: string, search?:
 
 export const getJobStats = (jobId: string) => {
   const rows = db.prepare('SELECT status, COUNT(*) as count FROM emails WHERE job_id = ? GROUP BY status').all(jobId) as any[];
-  const stats: Record<string, number> = {};
+  const job = getJob(jobId);
+  const stats: Record<string, number> = {
+    total: job?.totalEmails || 0,
+    processed: 0,
+    valid: 0,
+    invalid: 0,
+    risky: 0,
+    catch_all: 0,
+    unknown: 0,
+    duplicates: job?.duplicatesRemoved || 0,
+  };
   for (const row of rows) {
-    stats[row.status] = row.count;
+    if (row.status !== 'pending') stats.processed += row.count;
+    if (row.status === 'catch-all') stats.catch_all = row.count;
+    else if (row.status in stats) stats[row.status] = row.count;
   }
   return stats;
 };

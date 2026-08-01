@@ -27,6 +27,7 @@ initSocket(server);
 // Middleware
 app.use(cors({ origin: '*' }));
 app.use(express.json());
+app.get('/api/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 
 // Create required directories
 [config.EXPORTS_DIR, config.LOGS_DIR].forEach(dir => {
@@ -104,20 +105,6 @@ server.listen(config.PORT, () => {
   logger.info(`  Database:  ${config.DB_PATH}`);
   logger.info(`========================================`);
 
-  // Auto-open browser (cross-platform)
-  const url = `http://localhost:${config.PORT}`;
-  const platform = process.platform;
-  try {
-    if (platform === 'win32') {
-      import('child_process').then(cp => cp.exec(`start ${url}`));
-    } else if (platform === 'darwin') {
-      import('child_process').then(cp => cp.exec(`open ${url}`));
-    } else {
-      import('child_process').then(cp => cp.exec(`xdg-open ${url}`));
-    }
-  } catch {
-    // Silently ignore if browser can't be opened
-  }
 });
 
 // Handle graceful shutdown

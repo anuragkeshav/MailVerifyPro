@@ -71,11 +71,17 @@ class JobProcessor {
           }
           
           counter++;
-          if (counter % 10 === 0) {
-            queries.updateJobProgress(this.jobId, progressData);
-            socket.emitProgress(this.jobId, progressData);
-            socket.emitStatsUpdate(this.jobId, queries.getJobStats(this.jobId));
-          }
+          // Persist and broadcast each completed email. Small CSVs otherwise
+          // appeared frozen until all work was already finished.
+          queries.updateJobProgress(this.jobId, progressData);
+          socket.emitProgress(this.jobId, {
+            ...progressData,
+            jobId: this.jobId,
+            status: 'processing',
+            percent: progressData.total ? (progressData.processed / progressData.total) * 100 : 0,
+            etaSeconds: progressData.eta,
+          } as any);
+          socket.emitStatsUpdate(this.jobId, queries.getJobStats(this.jobId));
           
           socket.emitEmailVerified(this.jobId, result);
         } catch (error) {
@@ -88,7 +94,13 @@ class JobProcessor {
     
     if (!this.isCancelled && !this.queue.isPaused) {
       queries.updateJobProgress(this.jobId, progressData);
-      socket.emitProgress(this.jobId, progressData);
+      socket.emitProgress(this.jobId, {
+        ...progressData,
+        jobId: this.jobId,
+        status: 'completed',
+        percent: 100,
+        etaSeconds: 0,
+      } as any);
       socket.emitStatsUpdate(this.jobId, queries.getJobStats(this.jobId));
       this.completeJob();
     }
