@@ -72,8 +72,13 @@ app.use('/api/export', exportRoutes);
 app.use('/api/history', historyRoutes);
 
 // Serve frontend static files (production build)
-const publicDir = path.resolve(__dirname, '../../public');
-if (fs.existsSync(publicDir)) {
+// Check multiple possible locations for the public directory
+const possiblePublicDirs = [
+  path.resolve(__dirname, '../public'),      // app/public (Render: tsx src/server.ts)
+  path.resolve(__dirname, '../../public'),   // public at project root (local dev)
+];
+const publicDir = possiblePublicDirs.find(dir => fs.existsSync(dir));
+if (publicDir) {
   app.use(express.static(publicDir));
   // SPA fallback — serve index.html for all non-API routes
   app.get('*', (req, res) => {
@@ -82,6 +87,8 @@ if (fs.existsSync(publicDir)) {
     }
   });
   logger.info(`Serving frontend from: ${publicDir}`);
+} else {
+  logger.warn('No public directory found — frontend will not be served');
 }
 
 // Global error handler
